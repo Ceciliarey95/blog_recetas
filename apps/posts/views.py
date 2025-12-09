@@ -1,9 +1,11 @@
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
 from django.views.generic import ListView, DetailView
 
 from apps.posts.models import Categoria, Post
+from apps.opiniones.models import Opinion
+from apps.opiniones.forms import OpinionForm
 
 # Create your views here.
 
@@ -30,7 +32,7 @@ class ActualizarPost(UpdateView):
 
 class EliminarPost(DeleteView):
     model = Post
-    template_name = "posts/confirma_eliminar.html"
+    template_name = "genericos/confirma_eliminar.html"
     success_url = reverse_lazy("index")
 
 class ListarPosts(ListView):
@@ -80,4 +82,26 @@ def ordenar_por(request):
     }
     template_name = "posts/listar_posts.html"
 
+    return render(request, template_name, context)
+
+def leer_post(request, id):
+    post = Post.objects.get(id = id)
+    opiniones = Opinion.objects.filter(post = id)
+    form = OpinionForm(request.POST)
+
+    if form.is_valid():
+        if request.user.is_authenticated:
+            aux = form.save(commit=False)
+            aux.post = post
+            aux.usuario = request.user
+            aux.save()
+            form = OpinionForm()
+        else:
+            return redirect("apps.usuarios:iniciar_sesion")
+    template_name = "posts/post.html"
+    context = {
+        "post" : post,
+        "form" : form,
+        "opiniones" : opiniones
+    }
     return render(request, template_name, context)
